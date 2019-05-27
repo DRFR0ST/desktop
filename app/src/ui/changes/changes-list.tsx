@@ -125,6 +125,7 @@ interface IChangesListProps {
   readonly dispatcher: Dispatcher
   readonly availableWidth: number
   readonly isCommitting: boolean
+  readonly emoji: Map<string, string>
 
   /**
    * Click event handler passed directly to the onRowClick prop of List, see
@@ -589,6 +590,7 @@ export class ChangesList extends React.Component<
         )}
         singleFileCommit={singleFileCommit}
         key={repository.id}
+        emoji={this.props.emoji}
       />
     )
   }

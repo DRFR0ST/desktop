@@ -32,6 +32,55 @@ const addAuthorIcon = new OcticonSymbol(
     '1.205-.08 1.69-.5 2-.114.295 0 .5 0 .5s2 .684 2 2v.5z'
 )
 
+const gitmoji = [
+  [':art:', 'Improving structure / format of the code.', 'quality'],
+  [':zap:', 'Improving performance.', 'perfs'],
+  [':fire:', 'Removing code or files.', '- delete'],
+  [':bug:', 'Fixing a bug.', ''],
+  [':ambulance:', 'Critical hotfix.', 'urgent'],
+  [':sparkles:', 'Introducing new features.', '+'],
+  [':memo:', 'Writing docs.', ''],
+  [':rocket:', 'Deploying stuff.', ''],
+  [':lipstick:', 'Updating the UI and style files.', 'css'],
+  [':tada:', 'Initial commit.', ''],
+  [':white_check_mark:', 'Adding tests.', ''],
+  [':lock:', 'Fixing security issues.', ''],
+  [':apple:', 'Fixing something on macOS.', 'osx'],
+  [':penguin:', 'Fixing something on Linux.', ''],
+  [':checkered_flag:', 'Fixing something on Windows.', 'that was hard'],
+  [':bookmark:', 'Releasing / Version tags.', ''],
+  [':rotating_light:', 'Removing linter warnings.', ''],
+  [':construction:', 'Work in progress.', ''],
+  [':green_heart:', 'Fixing CI Build.', ''],
+  [':arrow_down:', 'Downgrading dependencies.', ''],
+  [':arrow_up:', 'Upgrading dependencies.', ''],
+  [':construction_worker:', 'Adding CI build system.', ''],
+  [':chart_with_upwards_trend:', 'Adding analytics or tracking code.', ''],
+  [':hammer:', 'Refactoring code.', 'going to bed now'],
+  [':heavy_minus_sign:', 'Removing a dependency.', 'YEESS!'],
+  [':whale:', 'Work about Docker.', ''],
+  [':heavy_plus_sign:', 'Adding a dependency.', ''],
+  [':wrench:', 'Changing configuration files.', ''],
+  [':globe_with_meridians:', 'Internationalization and localization.', ''],
+  [':pencil2:', 'Fixing typos.', 'oooops'],
+  [':hankey:', 'Writing bad code that needs to be improved.', 'shit'],
+  [':rewind:', 'Reverting changes.', 'go back'],
+  [':twisted_rightwards_arrows:', 'Merging branches.', ''],
+  [
+    ':package:',
+    'Updating compiled files or packages.',
+    '1101000110010111011001101100110111110000011101111101111111001011011001100100',
+  ],
+  [':alien:', 'Updating code due to external API changes.', ''],
+  [':truck:', 'Moving or renaming files.', ''],
+  [':page_facing_up:', 'Adding or updating license.', ''],
+  [':boom:', 'Introducing breaking changes.', 'non compatible'],
+  [':bento:', 'Adding or updating assets.', 'image sound'],
+  [':ok_hand:', 'Updating code due to code review changes.', ''],
+  [':wheelchair:', 'Improving accessibility.', 'altruist'],
+  [':bulb:', 'Documenting source code.', 'comments'],
+]
+
 interface ICommitMessageProps {
   readonly onCreateCommit: (context: ICommitContext) => Promise<boolean>
   readonly branch: string | null
@@ -46,6 +95,7 @@ interface ICommitMessageProps {
   readonly isCommitting: boolean
   readonly placeholder: string
   readonly singleFileCommit: boolean
+  readonly emoji: Map<string, string>
 
   /**
    * Whether or not to show a field for adding co-authors to
@@ -75,6 +125,8 @@ interface ICommitMessageState {
    * false when there's no action bar.
    */
   readonly descriptionObscured: boolean
+
+  readonly emojiPicker: boolean
 }
 
 function findUserAutoCompleteProvider(
@@ -112,6 +164,7 @@ export class CommitMessage extends React.Component<
         props.autocompletionProviders
       ),
       descriptionObscured: false,
+      emojiPicker: false,
     }
   }
 
@@ -177,6 +230,18 @@ export class CommitMessage extends React.Component<
 
   private onDescriptionChanged = (description: string) => {
     this.setState({ description })
+  }
+
+  private onEmojiChanged = (emoji: string) => {
+    const match: RegExpMatchArray | null = this.state.summary.match(/(\:.*\:)/g)
+    const summary = match
+      ? this.state.summary.replace(match[0], emoji)
+      : `${emoji} ${this.state.summary}`
+
+    this.setState({
+      summary,
+      emojiPicker: false,
+    })
   }
 
   private onSubmit = () => {
@@ -450,6 +515,8 @@ export class CommitMessage extends React.Component<
       'with-overflow': this.state.descriptionObscured,
     })
 
+    console.log(this.props.emoji)
+
     return (
       <div
         id="commit-message"
@@ -473,39 +540,69 @@ export class CommitMessage extends React.Component<
             onContextMenu={this.onAutocompletingInputContextMenu}
             disabled={this.props.isCommitting}
           />
+          <div
+            className={`summary-gitmoji ${
+              this.state.emojiPicker ? 'active' : ''
+            }`}
+            onClick={() =>
+              this.setState({ emojiPicker: !this.state.emojiPicker })
+            }
+          >
+            <Octicon className="icon" symbol={OcticonSymbol.smiley} />
+          </div>
         </div>
 
-        <FocusContainer
-          className="description-focus-container"
-          onClick={this.onFocusContainerClick}
-        >
-          <AutocompletingTextArea
-            className={descriptionClassName}
-            placeholder="Description"
-            value={this.state.description || ''}
-            onValueChanged={this.onDescriptionChanged}
-            autocompletionProviders={this.props.autocompletionProviders}
-            ref={this.onDescriptionFieldRef}
-            onElementRef={this.onDescriptionTextAreaRef}
-            onContextMenu={this.onAutocompletingInputContextMenu}
-            disabled={this.props.isCommitting}
-          />
-          {this.renderActionBar()}
-        </FocusContainer>
+        {this.state.emojiPicker ? (
+          <div className="gitmoji--list">
+            {gitmoji.map(e => (
+              <div
+                className="gitmoji--item"
+                onClick={() => this.onEmojiChanged(e[0])}
+              >
+                <img
+                  className="gitmoji--emoji"
+                  src={this.props.emoji.get(e[0])}
+                />{' '}
+                <p style={{ cursor: 'pointer' }}>{e[1]}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <React.Fragment>
+            <FocusContainer
+              className="description-focus-container"
+              onClick={this.onFocusContainerClick}
+            >
+              <AutocompletingTextArea
+                className={descriptionClassName}
+                placeholder="Description"
+                value={this.state.description || ''}
+                onValueChanged={this.onDescriptionChanged}
+                autocompletionProviders={this.props.autocompletionProviders}
+                ref={this.onDescriptionFieldRef}
+                onElementRef={this.onDescriptionTextAreaRef}
+                onContextMenu={this.onAutocompletingInputContextMenu}
+                disabled={this.props.isCommitting}
+              />
+              {this.renderActionBar()}
+            </FocusContainer>
 
-        {this.renderCoAuthorInput()}
+            {this.renderCoAuthorInput()}
 
-        <Button
-          type="submit"
-          className="commit-button"
-          onClick={this.onSubmit}
-          disabled={!buttonEnabled}
-        >
-          {loading}
-          <span title={`Commit to ${branchName}`}>
-            {loading ? 'Committing' : 'Commit'} to <strong>{branchName}</strong>
-          </span>
-        </Button>
+            <Button
+              type="submit"
+              className="commit-button"
+              onClick={this.onSubmit}
+              disabled={!buttonEnabled}
+            >
+              {loading}
+              <span title={`Commit to ${branchName}`}>
+                {loading ? 'Committing' : 'Commit'} to{' '}
+                <strong>{branchName}</strong>
+              </span>
+            </Button>
+          </React.Fragment>
+        )}
       </div>
     )
   }
